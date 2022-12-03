@@ -16,5 +16,7 @@ func (app *Config) ping(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(status)
+	if errorEncodeStatus := json.NewEncoder(w).Encode(status); errorEncodeStatus != nil {
+		app.Log.Error("error decoding server status response: ", zap.String("error", errorEncodeStatus.Error()))
+	}
 }

@@ -1,2 +1,2 @@
 ### Keep alive
-GET {{Host}}/ping
+HEAD {{Host}}/ping
