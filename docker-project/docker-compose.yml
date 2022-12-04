@@ -1,9 +1,18 @@
 version: '3'
 
 services:
-  mongo:
+  mongoimport:
+    image: 'mongo:5.0'
+    volumes:
+      - ./esp_verbos.json:/src/data/verbs.json
+    command: mongoimport --host mongodb --db verbs --collection conjugations --jsonArray --file /src/data/verbs.json
+
+
+  mongodb:
     image: 'mongo:5.0'
     ports:
       - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: verbs
+    volumes:
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
