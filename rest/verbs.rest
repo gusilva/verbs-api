@@ -1,2 +1,5 @@
 ### Keep alive
-HEAD {{Host}}/ping
+GET {{Host}}/ping
+
+### Find verb
+GET {{Host}}/verb/hacer

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gusilva/verbs-api/pkg"
 	"go.uber.org/zap"
-	"log"
 	"net/http"
 )
 
@@ -22,8 +21,16 @@ func main() {
 		}
 	}()
 
+	database, errorDatabase := pkg.ConnectToMongo()
+	if errorDatabase != nil {
+		logger.Error("database error", zap.Error(errorDatabase))
+	}
+
+	verbRepository := pkg.CreateVerbRepository(database.Collection("conjugations"))
+
 	app := pkg.Config{
-		Log: logger,
+		Log:        logger,
+		Repository: verbRepository,
 	}
 
 	srv := &http.Server{
@@ -33,6 +40,6 @@ func main() {
 
 	logger.Info("Start server", zap.String("port", webPort))
 	if errorListenServer := srv.ListenAndServe(); errorListenServer != nil {
-		log.Panic(errorListenServer)
+		logger.Panic("listen server error", zap.Error(errorListenServer))
 	}
 }

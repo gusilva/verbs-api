@@ -12,7 +12,7 @@ func (app *Config) Routes() http.Handler {
 
 	mux.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
@@ -21,7 +21,7 @@ func (app *Config) Routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
-	mux.Get("/ping", app.ping)
+	mux.Get("/verb/{VERB_NAME}", app.findVerb)
 
 	return mux
 }
