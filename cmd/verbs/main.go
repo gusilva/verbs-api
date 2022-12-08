@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gusilva/verbs-api/pkg"
-	"go.uber.org/zap"
+	"log"
 	"net/http"
 	"os"
 )
@@ -14,30 +14,27 @@ const (
 )
 
 func main() {
-	logger, errorZapLogger := zap.NewDevelopment()
-	if errorZapLogger != nil {
-		panic(errorZapLogger)
+	flags := log.LstdFlags | log.Lshortfile
+	l := &pkg.Logger{
+		InfoLogger:  log.New(os.Stdout, "[INFO] ", flags),
+		ErrorLogger: log.New(os.Stdout, "[ERROR] ", flags),
+		DebugLogger: log.New(os.Stdout, "[DEBUG] ", flags),
+		IsDevMode:   true,
 	}
 
-	defer func() {
-		if errorLoggerSync := logger.Sync(); errorLoggerSync != nil {
-			fmt.Printf("error sync zap logger: %s", errorLoggerSync.Error())
-		}
-	}()
-
 	mongoDB := &pkg.MongoDatabase{
-		DSN:    mongoDefaultDSN,
-		Logger: logger,
+		DSN: mongoDefaultDSN,
+		Log: l,
 	}
 
 	if mongoEnvUrl := os.Getenv("MONGO_DSN"); mongoEnvUrl != "" {
 		mongoDB.DSN = mongoEnvUrl
 	} else {
-		logger.Warn("MONGO_DSN env is not set")
+		l.Info("MONGO_DSN env is not set")
 	}
 
 	if errorConnectDB := mongoDB.ConnectToMongo(); errorConnectDB != nil {
-		logger.Error("error on connect to mongo DB", zap.Error(errorConnectDB))
+		l.Error("error on connect to mongo DB:", errorConnectDB.Error())
 		panic(errorConnectDB)
 	}
 
@@ -45,14 +42,13 @@ func main() {
 
 	collection, errorCollection := mongoDB.GetCollection("conjugations")
 	if errorCollection != nil {
-		logger.Error(errorCollection.Error())
-		panic(errorCollection)
+		l.Error(errorCollection.Error())
 	}
 
 	verbRepository := pkg.CreateVerbRepository(collection)
 
 	app := pkg.Config{
-		Log:        logger,
+		Log:        l,
 		Repository: verbRepository,
 	}
 
@@ -61,8 +57,8 @@ func main() {
 		Handler: app.Routes(),
 	}
 
-	logger.Debug("Start server", zap.String("port", webPort))
+	l.Info("Start server port -", webPort)
 	if errorListenServer := srv.ListenAndServe(); errorListenServer != nil {
-		logger.Panic("listen server error", zap.Error(errorListenServer))
+		log.Panic("listen server error:", errorListenServer.Error())
 	}
 }

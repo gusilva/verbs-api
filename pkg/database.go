@@ -6,13 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"go.uber.org/zap"
 	"time"
 )
 
 type MongoDatabase struct {
 	DSN    string
-	Logger *zap.Logger
+	Log    ILogger
 	client *mongo.Client
 }
 
@@ -34,10 +33,11 @@ func (db *MongoDatabase) PingDB() {
 	defer cancel()
 
 	if errorPingDB := db.client.Ping(ctx, readpref.Primary()); errorPingDB != nil {
-		db.Logger.Warn("db unavailable", zap.String("error", errorPingDB.Error()))
-	} else {
-		db.Logger.Debug("database connected successfully")
+		db.Log.Error("db unavailable", errorPingDB.Error())
+		return
 	}
+
+	db.Log.Debug("database connected successfully")
 }
 
 func (db *MongoDatabase) GetCollection(collName string) (*mongo.Collection, error) {
@@ -45,7 +45,7 @@ func (db *MongoDatabase) GetCollection(collName string) (*mongo.Collection, erro
 		return nil, fmt.Errorf("no database client set")
 	}
 
-	db.Logger.Debug("getting collection", zap.String("name", collName))
+	db.Log.Debug("getting collection:", collName)
 
 	return db.client.Database("verbs").Collection(collName), nil
 }
