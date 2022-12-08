@@ -5,12 +5,16 @@ import (
 	"github.com/gusilva/verbs-api/pkg"
 	"go.uber.org/zap"
 	"net/http"
+	"os"
 )
 
-const webPort = "8088"
+const (
+	webPort         = "8088"
+	mongoDefaultDSN = "mongodb://localhost:27017"
+)
 
 func main() {
-	logger, errorZapLogger := zap.NewProduction()
+	logger, errorZapLogger := zap.NewDevelopment()
 	if errorZapLogger != nil {
 		panic(errorZapLogger)
 	}
@@ -21,12 +25,31 @@ func main() {
 		}
 	}()
 
-	database, errorDatabase := pkg.ConnectToMongo()
-	if errorDatabase != nil {
-		logger.Error("database error", zap.Error(errorDatabase))
+	mongoDB := &pkg.MongoDatabase{
+		DSN:    mongoDefaultDSN,
+		Logger: logger,
 	}
 
-	verbRepository := pkg.CreateVerbRepository(database.Collection("conjugations"))
+	if mongoEnvUrl := os.Getenv("MONGO_DSN"); mongoEnvUrl != "" {
+		mongoDB.DSN = mongoEnvUrl
+	} else {
+		logger.Warn("MONGO_DSN env is not set")
+	}
+
+	if errorConnectDB := mongoDB.ConnectToMongo(); errorConnectDB != nil {
+		logger.Error("error on connect to mongo DB", zap.Error(errorConnectDB))
+		panic(errorConnectDB)
+	}
+
+	mongoDB.PingDB()
+
+	collection, errorCollection := mongoDB.GetCollection("conjugations")
+	if errorCollection != nil {
+		logger.Error(errorCollection.Error())
+		panic(errorCollection)
+	}
+
+	verbRepository := pkg.CreateVerbRepository(collection)
 
 	app := pkg.Config{
 		Log:        logger,
@@ -38,7 +61,7 @@ func main() {
 		Handler: app.Routes(),
 	}
 
-	logger.Info("Start server", zap.String("port", webPort))
+	logger.Debug("Start server", zap.String("port", webPort))
 	if errorListenServer := srv.ListenAndServe(); errorListenServer != nil {
 		logger.Panic("listen server error", zap.Error(errorListenServer))
 	}

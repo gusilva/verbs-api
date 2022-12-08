@@ -2,10 +2,10 @@ package pkg
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 	"net/http"
+	"time"
 )
 
 type Config struct {
@@ -13,24 +13,17 @@ type Config struct {
 	Repository VerbRepository
 }
 
-func (app *Config) ping(w http.ResponseWriter, _ *http.Request) {
-	status := map[string]string{
-		"status": "ok",
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if errorEncodeStatus := json.NewEncoder(w).Encode(status); errorEncodeStatus != nil {
-		app.Log.Error("error decoding server status response: ", zap.String("error", errorEncodeStatus.Error()))
-	}
-}
-
 func (app *Config) findVerb(w http.ResponseWriter, r *http.Request) {
 	verbName := chi.URLParam(r, "VERB_NAME")
+	app.Log.Debug("find handler", zap.String("verbName", verbName))
 
-	verbConjugation, errorFindVerb := app.Repository.FindVerb(context.TODO(), verbName)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	verbConjugation, errorFindVerb := app.Repository.FindVerb(ctx, verbName)
 	if errorFindVerb != nil {
-		errorWriteJson := app.errorJSON(w, errorFindVerb, http.StatusBadRequest)
-		app.Log.Error("error writing error response", zap.Error(errorWriteJson))
+		app.Log.Warn("error writing error response", zap.String("msg", errorFindVerb.Error()))
+		_ = app.errorJSON(w, errorFindVerb, http.StatusBadRequest)
 
 		return
 	}
@@ -44,5 +37,4 @@ func (app *Config) findVerb(w http.ResponseWriter, r *http.Request) {
 	if errorWriteJson := app.writeJSON(w, http.StatusOK, payload); errorWriteJson != nil {
 		app.Log.Error("error writing json response", zap.Error(errorWriteJson))
 	}
-
 }
