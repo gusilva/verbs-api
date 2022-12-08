@@ -2,4 +2,7 @@
 GET {{Host}}/ping
 
 ### Find verb
-GET {{Host}}/verb/hacer
+GET {{Host}}/verb/find/hacer
+
+### Search verb
+GET {{Host}}/verb/search/sali

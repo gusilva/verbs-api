@@ -69,3 +69,7 @@ type Conjugation struct {
 	It        string `bson:"él/ella/Ud."                json:"él/ella/Ud."`
 	They      string `bson:"ellos/ellas/Uds."           json:"ellos/ellas/Uds."`
 }
+
+type SearchResult struct {
+	Verbo string `bson:"verbo" json:"verbo"`
+}

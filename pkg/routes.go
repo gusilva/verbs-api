@@ -21,7 +21,8 @@ func (app *Config) Routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
-	mux.Get("/verb/{VERB_NAME}", app.findVerb)
+	mux.Get("/verb/find/{VERB_NAME}", app.findVerb)
+	mux.Get("/verb/search/{QUERY_WORD}", app.searchVerb)
 
 	return mux
 }

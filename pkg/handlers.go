@@ -22,7 +22,7 @@ func (app *Config) findVerb(w http.ResponseWriter, r *http.Request) {
 
 	verbConjugation, errorFindVerb := app.Repository.FindVerb(ctx, verbName)
 	if errorFindVerb != nil {
-		app.Log.Warn("error writing error response", zap.String("msg", errorFindVerb.Error()))
+		app.Log.Warn("error find verb", zap.String("msg", errorFindVerb.Error()))
 		_ = app.errorJSON(w, errorFindVerb, http.StatusBadRequest)
 
 		return
@@ -32,6 +32,32 @@ func (app *Config) findVerb(w http.ResponseWriter, r *http.Request) {
 		Error:   false,
 		Message: "verb found",
 		Data:    verbConjugation,
+	}
+
+	if errorWriteJson := app.writeJSON(w, http.StatusOK, payload); errorWriteJson != nil {
+		app.Log.Error("error writing json response", zap.Error(errorWriteJson))
+	}
+}
+
+func (app *Config) searchVerb(w http.ResponseWriter, r *http.Request) {
+	queryWord := chi.URLParam(r, "QUERY_WORD")
+	app.Log.Debug("search handler", zap.String("queryWord", queryWord))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	verbs, errorSearchVerb := app.Repository.SearchVerb(ctx, queryWord)
+	if errorSearchVerb != nil {
+		app.Log.Warn("error search verb", zap.String("msg", errorSearchVerb.Error()))
+		_ = app.errorJSON(w, errorSearchVerb, http.StatusBadRequest)
+
+		return
+	}
+
+	payload := jsonResponse{
+		Error:   false,
+		Message: "verbs found",
+		Data:    verbs,
 	}
 
 	if errorWriteJson := app.writeJSON(w, http.StatusOK, payload); errorWriteJson != nil {
